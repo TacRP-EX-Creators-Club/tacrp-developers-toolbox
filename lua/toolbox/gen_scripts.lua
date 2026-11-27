@@ -126,18 +126,50 @@ file.CreateDir("tacrp_rewrite")
 
 for _, classname in ipairs(interesting_weapons) do
 	local output = ""
-	local function nl()
-		output = output .. "\n"
+	local function append(str)
+		output = output .. str
 	end
 	local function n(str)
-		output = output .. str .. "\n"
+		output = output .. (str or "") .. "\n"
 	end
 	local weapon_stored = weapons.GetStored(classname)
 	local accounted = {}
-	local function kv(key, suffix)
+	local function boiler(key)
+		append("SWEP." .. key .. " = ")
+	end
+	local function kv(key)
 		accounted[key] = true
 		local val = script_value(weapon_stored[key], nil, key) or "nil"
-		n("SWEP." .. key .. " = " .. val .. (suffix or ""))
+		n("SWEP." .. key .. " = " .. val)
+	end
+	local function kv_moa(key)
+		accounted[key] = true
+		local val = weapon_stored[key]
+		boiler(key)
+		if val then
+			assert(tonumber(val), tostring(key) .. " is not a number")
+			val = math.Round(val / TacRP.MoaToRad, 1)
+			append(val .. " * TacRP.MoaToRad")
+		else
+			append("nil")
+		end
+		n()
+	end
+	local function kv_deg(key)
+		accounted[key] = true
+		local val = weapon_stored[key]
+		boiler(key)
+		if val then
+			assert(tonumber(val), tostring(key) .. " is not a number")
+			val = math.Round(val / TacRP.DegToRad, 1)
+			append(val .. " * TacRP.DegToRad")
+		else
+			append("nil")
+		end
+		n()
+	end
+	local function suffix(str)
+		output = output:Left(-2) .. str .. "\n"
 	end
 	local function kv_optional(key)
 		accounted[key] = true
@@ -149,7 +181,7 @@ for _, classname in ipairs(interesting_weapons) do
 
 	kv("Base")
 	kv("Spawnable")
-	nl()
+	n()
 	kv("PrintName")
 	kv("AbbrevName")
 	kv("SubCatType")
@@ -176,9 +208,38 @@ for _, classname in ipairs(interesting_weapons) do
 	kv("ClipSize")
 	kv("Ammo")
 	kv("RPM")
+	boiler("Delay")
+	n( "60 / " .. weapon_stored["RPM"] )
 	if not kv_optional("Firemodes") then
 		kv("Firemode")
 	end
+
+	boiler("Modes")
+	n("{")
+	if weapon_stored["Firemodes"] then
+		for _, burst_length in ipairs( weapon_stored["Firemodes"] ) do
+			if burst_length == 2 then
+				burst_length = "math.huge"
+			elseif burst_length == 1 then
+				burst_length = 1
+			elseif burst_length < 0 then
+				burst_length = -burst_length
+			end
+			n("\t{ Mode = " .. burst_length .. " }")
+		end
+	elseif weapon_stored["Firemode"] then
+		local burst_length = weapon_stored["Firemode"]
+		if burst_length == 2 then
+			burst_length = "math.huge"
+		elseif burst_length == 1 then
+			burst_length = 1
+		elseif burst_length < 0 then
+			burst_length = -burst_length
+		end
+		n("\t{ Mode = " .. burst_length .. " }")
+	end
+	n("}")
+	kv("PostBurstDelay")
 
 	n("\n-- Terminal Effect")
 	kv("Damage_Max")
@@ -187,24 +248,24 @@ for _, classname in ipairs(interesting_weapons) do
 	kv("Range_Max")
 	
 	n("\n-- Ballistics")
-	kv("Spread")
+	kv_moa("Spread")
 	kv("MuzzleVelocity")
 	kv("Penetration")
 	kv("ArmorPenetration")
 	kv("ArmorBonus")
-
+	
 	n("\n-- Recoil & Bloom")
 	kv("RecoilKick")
 	kv("RecoilStability")
-	kv("RecoilSpreadPenalty", " -- Bloom to Spread")
-	kv("RecoilAltMultiplier", " -- Bloom to Spread")
-	kv("RecoilDissipationRate", " -- Bloom Recovery")
-	kv("RecoilResetTime", " -- Bloom Cooldown")
-	kv("RecoilResetInstant")
-	kv("RecoilFirstShotMult", " -- Initial Bloom")
-	kv("RecoilMaximum", " -- Maximum Bloom")
+	kv_moa("RecoilSpreadPenalty")	suffix(" -- Bloom to Spread")
+	kv("RecoilAltMultiplier")		suffix(" -- Bloom to Spread")
+	kv("RecoilFirstShotMult")		suffix(" -- Initial Bloom")
+	kv("RecoilMaximum")				suffix(" -- Maximum Bloom")
 	kv("RecoilVisualKick")
-	kv("RecoilPerShot", " -- Bloom Gain")
+	kv("RecoilPerShot")				suffix(" -- Bloom Gain")
+	kv("RecoilDissipationRate")		suffix(" -- Bloom Recovery")
+	kv("RecoilResetTime")			suffix(" -- Bloom Cooldown")
+	kv("RecoilResetInstant")
 
 	n("\n-- Mobility")
 	kv("MoveSpeedMult")
@@ -215,8 +276,9 @@ for _, classname in ipairs(interesting_weapons) do
 
 	n("\n-- Manuevering")
 	kv("FreeAimMaxAngle")
-	kv("MidAirSpreadPenalty")
-	kv("HipFireSpreadPenalty")
+	kv_deg("MidAirSpreadPenalty")
+	kv_deg("HipFireSpreadPenalty")
+	kv_deg("MoveSpreadPenalty")
 	
 	n("\n-- Sway")
 	kv("Sway")

@@ -24,6 +24,12 @@ end
 local function style_percentage(value)
 	return round(value * 100) .. "%"
 end
+local function style_place_1(value)
+	return places(value, 1)
+end
+local function style_place_2(value)
+	return places(value, 1)
+end
 local function style_time_seconds(value)
 	return places(value, 1) .. "s"
 end
@@ -140,6 +146,7 @@ local sheet_data = {
 	{
 		Title = "Recoil Kick",
 		Stat = "RecoilKick",
+		Style = style_place_1,
 	},
 	{
 		Title = "Recoil Stability",
@@ -176,9 +183,11 @@ local sheet_data = {
 		Compute = function(wep)
 			local csmdl = ClientsideModel(wep.ViewModel)
 			if not csmdl then return end
-			local result = wep:GetReloadTime(true, csmdl)
+			local success, result = pcall(function()
+				return wep:GetReloadTime(true, csmdl)
+			end)
 			csmdl:Remove()
-			return result
+			return success and result or nil
 		end,
 		Style = style_time_seconds,
 	},
@@ -208,6 +217,7 @@ local sheet_data = {
 		Compute = function(wep, value)
 			return value * wep:GetBaseValue("RecoilAltMultiplier")
 		end,
+		Style = style_place_2,
 	},
 	{
 		Title = "Bloom Recovery",
@@ -292,12 +302,17 @@ for _, column in ipairs(sheet_data) do
 end
 
 local function export()
-	-- Sort the weaponlist
 	local weapons_to_sort = {}
-	-- table.insert(weapons_to_sort, "tacrp_base")
 	table.Add(weapons_to_sort, TacRP.Packs["tacrp"].WeaponsArray)
 	table.Add(weapons_to_sort, TacRP.Packs["extras"].WeaponsArray)
-	table.Add(weapons_to_sort, TacRP.Packs["interops"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["interops"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["ar"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["sd"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["melee"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["ak"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["heavyduty"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["exoops"].WeaponsArray)
+	-- table.Add(weapons_to_sort, TacRP.Packs["pa"].WeaponsArray)
 	table.insert(weapons_to_sort, "tacrp_base")
 	local weapons_cloned = {}
 	local classname_to_weapon = {}
@@ -350,30 +365,19 @@ local function export()
 	local subcats = {}
 	for _, wep in ipairs(weapons_cloned) do
 		local classname = wep.ClassName
-		local weapon_type = wep.SubCatType or "[missing]"
-		local weapon_tier = wep.SubCatTier or "[missing]"
+		local weapon_type = wep.SubCatType
 		if not subcats[weapon_type] then
-			subcats[weapon_type] = {
-				all_weapons = { --[[
-                    "tacrp_ak47",
-                ]] },
-				tiered_weapons = { --[[
-                    ["Consumer"] = {
-                        "tacrp_ak47",
-                    },
-                ]] },
-			}
+			subcats[weapon_type] = {}
 		end
-		if not subcats[weapon_type].tiered_weapons[weapon_tier] then
-			subcats[weapon_type].tiered_weapons[weapon_tier] = {}
-		end
-		table.insert(subcats[weapon_type].all_weapons, classname)
-		table.insert(subcats[weapon_type].tiered_weapons[weapon_tier], classname)
+		table.insert(subcats[weapon_type], classname)
 	end
 
 	local output_html = ""
 	local function n(str)
 		output_html = output_html .. (str or "") .. "\n"
+	end
+	local function a(str)
+		output_html = output_html .. (str or "")
 	end
 
 	n("<!DOCTYPE html>")
@@ -385,6 +389,51 @@ local function export()
 	n("</head>")
 	n("<body>")
 
+	-- https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script#embedding_data_in_html
+	n("<script id='all_stats' type='application/json'>")
+	n("[")
+	for _, column_data in ipairs(sheet_data) do
+		n('\t"' .. column_data.Class .. (_ ~= #sheet_data and '",' or '"'))
+	end
+	n("]")
+	n("</script>")
+	n("<script id='all_packs' type='application/json'>")
+	n("[")
+	for _, pack_name in ipairs(TacRP.PackOrder) do
+		n('\t"' .. pack_name .. (_ ~= #TacRP.PackOrder and '",' or '"'))
+	end
+	n("]")
+	n("</script>")
+
+	n("<div class='tweakers'>")
+	n("<fieldset class='fieldset_stats'>")
+	n("<legend>Visible stats</legend>")
+	for _, column_data in ipairs(sheet_data) do
+		n("<div>")
+		n("\t<input type='checkbox' id='checkbox_stat_" .. column_data.Class .. "' checked/>")
+		n("\t<label for='checkbox_stat_" .. column_data.Class .. "'>" .. column_data.Title .. "</label>")
+		n("</div>")
+	end
+	n("</fieldset>")
+
+	n("<fieldset class='fieldset_packs'>")
+	n("<legend>Visible packs</legend>")
+	for _, pack_name in ipairs(TacRP.PackOrder) do
+		local pack_data = TacRP.Packs[pack_name]
+		n("<div>")
+		n("\t<input type='checkbox' id='checkbox_pack_" .. pack_name .. "' checked/>")
+		n("\t<label for='checkbox_pack_" .. pack_name .. "'>" .. pack_data.Title .. "</label>")
+		n("</div>")
+	end
+	-- uncategorized
+	n("<div>")
+	n("\t<input type='checkbox' id='checkbox_pack_" .. "uncategorized" .. "' checked/>")
+	n("\t<label for='checkbox_pack_" .. "uncategorized" .. "'>" .. "Uncategorized" .. "</label>")
+	n("</div>")
+	-- uncategorized
+	n("</fieldset>")
+	n("</div>")
+
 	local subcats_keys = table.GetKeys(subcats)
 	table.sort(subcats_keys, function(a, b)
 		return (TacRP.Type_SortOrder[a] or math.huge) < (TacRP.Type_SortOrder[b] or math.huge)
@@ -392,17 +441,17 @@ local function export()
 	for _, subcat_name in ipairs(subcats_keys) do
 		local subcat_data = subcats[subcat_name]
 		n("<table class='" .. subcat_name .. "'>")
-		n("<tr>")
 		n("<caption>" .. subcat_name .. "</caption>")
+		n("<tr>")
 		for _, column_data in ipairs(sheet_data) do
-			n("<th class='stat_" .. column_data.Class .. "'>")
-			n(column_data.Title)
+			a("\t<th class='stat_" .. column_data.Class .. "'>")
+			a(column_data.Title)
 			n("</th>")
 		end
 		n("</tr>")
 
 		local weapons_sorted = {}
-		for i, classname in ipairs(subcat_data.all_weapons) do weapons_sorted[i] = classname end
+		for i, classname in ipairs(subcat_data) do weapons_sorted[i] = classname end
 		table.sort(weapons_sorted, function(a, b)
 			local a_def = classname_to_weapon[a]
 			local b_def = classname_to_weapon[b]
@@ -415,27 +464,31 @@ local function export()
 		end)
 		for _, classname in ipairs(weapons_sorted) do
 			local def = classname_to_weapon[classname]
-			n("<tr class='tier_" .. def.SubCatTier:lower() .. "'>")
+			local row_class = "tier_" .. def.SubCatTier:lower()
+			row_class = row_class .. " pack_" .. (TacRP.ClassToPack[classname] or "uncategorized")
+			n("<tr class='" .. row_class .. "'>")
 			for column_index, column_data in ipairs(sheet_data) do
 				local result = computed[classname][column_index].Result
-				local class = "stat_" .. column_data.Class
+				local data_class = "stat_" .. column_data.Class
 				if computed["tacrp_base"] and result == computed["tacrp_base"][column_index].Result then
-					class = class .. " stat_is_base"
+					data_class = data_class .. " stat_is_base"
 				end
 				local undefined = false
 				if column_data.Stat and not classname_to_weapon_stored[classname][column_data.Stat] then
-					class = class .. " stat_is_undefined"
+					data_class = data_class .. " stat_is_undefined"
 					undefined = true
 				end
 				undefined = undefined and " title='This stat is undefined'" or ""
-				n("<td class='" .. class .. "'" .. undefined .. ">")
-				n(result)
+				a("\t<td class='" .. data_class .. "'" .. undefined .. ">")
+				a(result)
 				n("</td>")
 			end
 			n("</tr>")
 		end
 		n("</table>")
 	end
+
+	n("<script type='module' src='tacrp_spreadsheet.js'></script>")
 
 	n("</body>")
 	n("</html>")

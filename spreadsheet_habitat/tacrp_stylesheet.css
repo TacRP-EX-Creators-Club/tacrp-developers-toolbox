@@ -1,0 +1,107 @@
+html {
+  font-size: 12px;
+  font-family: sans-serif;
+}
+
+table {
+  border-collapse: collapse;
+  border: 2px solid hsl(0 0 40%);
+  letter-spacing: 1px;
+}
+
+caption {
+  text-align: left;
+  font-weight: bold;
+}
+
+thead,
+tfoot {
+  background-color: rgb(228 240 245);
+}
+
+th,
+td {
+  text-overflow: ellipsis;
+  /* white-space: nowrap; */
+  overflow: hidden;
+  border: 1px solid hsl(0 0 40%);
+  padding: 2px 4px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+fieldset {
+  width: fit-content;
+  height: fit-content;
+}
+
+.tweakers {
+  display: flex;
+  flex-direction: row;
+}
+
+th {
+  font-size: .75rem;
+  text-align: left;
+  &.stat_print_name {
+    min-width: 128px;
+    max-width: 128px;
+  }
+}
+
+td {
+  /* color: white; */
+  &.stat_print_name {
+    position: sticky;
+    left: 0;
+  }
+  /* &.stat_is_base {
+    color: hsl(0 0 30%)
+  } */
+  &.stat_is_undefined {
+    color: hsl(0 50% 30%);
+    text-decoration: underline dotted;
+  }
+}
+tr {
+  &.tier_value {
+    background-color: color-mix( rgb(109 101 101), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_consumer {
+    background-color: color-mix( rgb(99 143 188), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_security {
+    background-color: color-mix( rgb(144 95 223), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_operator {
+    background-color: color-mix( rgb(220 107 157), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_elite {
+    background-color: color-mix( rgb(255 77 77), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_special {
+    background-color: color-mix( rgb(155 126 110), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+  &.tier_exotic {
+    background-color: color-mix( rgb(202 171 5), white 30% );
+    > td.stat_print_name { background-color: alpha(from white / 30%) }
+  }
+}
+
+tfoot th {
+  text-align: right;
+}
+
+tfoot td {
+  font-weight: bold;
+}
+
+body {
+  min-width: max-content;
+}

@@ -1,3 +1,11 @@
+local interesting_weapons = {
+	"tacrp_pa_lapd",
+	"tacrp_amd65",
+	"tacrp_ak47",
+	"tacrp_k1a",
+	"tacrp_base",
+}
+
 local DROP_KEYS = {
 	["NoRMR"] = true,
 	["Slot"] = true,
@@ -115,12 +123,6 @@ local function script_value(input, indent, key)
 end
 
 file.CreateDir("tacrp_rewrite")
-
-local interesting_weapons = {
-	"tacrp_pa_lapd",
-	"tacrp_amd65",
-	"tacrp_base",
-}
 
 for _, classname in ipairs(interesting_weapons) do
 	local output = ""
